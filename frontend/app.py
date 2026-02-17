@@ -1,36 +1,21 @@
 """
 Aplicación principal Streamlit para SICIAP Cloud
-Usa navegación nativa (st.navigation) para menú profesional
+Usa option_menu mejorado para menú profesional y ocultar Importar en nube
 """
 import streamlit as st
-import os
+from streamlit_option_menu import option_menu
 import sys
+import os
 from pathlib import Path
 
 # Agregar directorio raíz al path
 root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
 
+from frontend.pages import dashboard, ordenes, ejecucion, stock, pedidos, importar
 from frontend.utils.db_connection import test_connection
 
-# Determinar rutas de páginas según el entorno
-# En Streamlit Cloud, el directorio de trabajo es la raíz del proyecto
-# En local, también ejecutamos desde la raíz
-_app_dir = Path(__file__).parent
-_pages_dir = _app_dir / "pages"
-
-# Verificar si las páginas están en frontend/pages/ (estructura actual)
-if (_pages_dir / "dashboard.py").exists():
-    # Estructura: frontend/pages/dashboard.py (relativo a raíz: frontend/pages/)
-    PAGE_PREFIX = "frontend/pages/"
-else:
-    # Fallback: buscar en pages/ en la raíz
-    if (root_dir / "pages" / "dashboard.py").exists():
-        PAGE_PREFIX = "pages/"
-    else:
-        PAGE_PREFIX = "frontend/pages/"  # Default
-
-# --- CONFIGURACIÓN DE PÁGINA ---
+# Configuración de la página
 st.set_page_config(
     page_title="SICIAP Cloud - Sistema Integrado",
     page_icon="🏥",
@@ -38,24 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- DETECCIÓN DE ENTORNO ---
-# Si DB_HOST contiene localhost, estamos en local. Si no, estamos en la nube.
-DB_HOST = os.getenv("DB_HOST", "")
-ES_LOCAL = "localhost" in DB_HOST or "127.0.0.1" in DB_HOST or DB_HOST == ""
-
-# Verificar conexiones para mostrar estado
-supabase_connected = test_connection(use_supabase=True)
-local_connected = test_connection(use_supabase=False)
-
-# Indicador de estado en la parte superior
-if supabase_connected:
-    st.markdown('<div style="position: fixed; top: 10px; right: 10px; background-color: #28a745; color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; z-index: 1000;">🟢 Supabase Conectado</div>', unsafe_allow_html=True)
-elif local_connected:
-    st.markdown('<div style="position: fixed; top: 10px; right: 10px; background-color: #ffc107; color: black; padding: 5px 10px; border-radius: 5px; font-size: 12px; z-index: 1000;">🟡 Modo Local</div>', unsafe_allow_html=True)
-else:
-    st.markdown('<div style="position: fixed; top: 10px; right: 10px; background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; z-index: 1000;">🔴 Sin Conexión</div>', unsafe_allow_html=True)
-
-# Título principal
+# CSS personalizado
 st.markdown("""
 <style>
     .main-header {
@@ -65,38 +33,112 @@ st.markdown("""
         margin-bottom: 2rem;
         font-weight: bold;
     }
+    .status-indicator {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background-color: #28a745;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 1000;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<h1 class="main-header">🏥 SICIAP Cloud</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Sistema Integrado de Gestión - Arquitectura Híbrida</p>', unsafe_allow_html=True)
 
-# --- DEFINICIÓN DE PÁGINAS ---
-# Mapeamos archivos a nombres profesionales con iconos usando la ruta detectada
-pg_dashboard = st.Page(f"{PAGE_PREFIX}dashboard.py", title="📊 Dashboard General", icon="📈", default=True)
-pg_ordenes = st.Page(f"{PAGE_PREFIX}ordenes.py", title="📋 Órdenes de Compra", icon="📋")
-pg_ejecucion = st.Page(f"{PAGE_PREFIX}ejecucion.py", title="📊 Ejecución Contratos", icon="📊")
-pg_stock = st.Page(f"{PAGE_PREFIX}stock.py", title="📦 Stock y Parques", icon="📦")
-pg_pedidos = st.Page(f"{PAGE_PREFIX}pedidos.py", title="📝 Pedidos", icon="📝")
+def is_running_on_streamlit_cloud():
+    """Detecta si la app está corriendo en Streamlit Cloud"""
+    return os.getenv('STREAMLIT_SHARING_MODE') == 'sharing'
 
-# Esta es la página conflictiva - solo en local
-pg_importar = st.Page(f"{PAGE_PREFIX}importar.py", title="📥 Importar Excel", icon="📥")
 
-# --- LÓGICA DEL MENÚ ---
-if ES_LOCAL and local_connected:
-    # EN TU PC: Muestra todo, incluyendo Importar
-    pg = st.navigation({
-        "📊 Principal": [pg_dashboard],
-        "📋 Gestión": [pg_ordenes, pg_ejecucion, pg_stock, pg_pedidos],
-        "⚙️ Administración": [pg_importar]  # <--- Solo aparece en local
-    })
-else:
-    # EN LA NUBE: Oculta Importar y agrupa bonito
-    pg = st.navigation({
-        "📊 Principal": [pg_dashboard],
-        "📋 Gestión": [pg_ordenes, pg_ejecucion, pg_stock, pg_pedidos]
-        # La sección de Importar NO existe aquí
-    })
+def main():
+    """Función principal de la aplicación"""
+    
+    # Detectar si estamos en Streamlit Cloud
+    is_cloud = is_running_on_streamlit_cloud()
+    
+    # Verificar conexiones
+    supabase_connected = test_connection(use_supabase=True)
+    local_connected = test_connection(use_supabase=False)
+    
+    # Indicador de estado
+    if supabase_connected:
+        st.markdown('<div class="status-indicator">🟢 Supabase Conectado</div>', unsafe_allow_html=True)
+    elif local_connected:
+        st.markdown('<div class="status-indicator">🟡 Modo Local</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="status-indicator">🔴 Sin Conexión</div>', unsafe_allow_html=True)
+    
+    # Título principal
+    st.markdown('<h1 class="main-header">🏥 SICIAP Cloud</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Sistema Integrado de Gestión - Arquitectura Híbrida</p>', unsafe_allow_html=True)
+    
+    # Menú lateral
+    with st.sidebar:
+        st.image("https://via.placeholder.com/200x100/0e4f3c/ffffff?text=SICIAP", width=200)
+        st.markdown("---")
+        
+        # Menú de navegación (solo mostrar "Importar Excel" en local, NO en la nube)
+        menu_options = ["📊 Dashboard", "📋 Órdenes", "📊 Ejecución", "📦 Stock", "📝 Pedidos"]
+        menu_icons = ["speedometer2", "file-text", "check-circle", "box-seam", "cart"]
+        
+        # Solo agregar "Importar Excel" si estamos en local (no en Streamlit Cloud)
+        if not is_cloud and local_connected:
+            menu_options.insert(0, "📥 Importar Excel")
+            menu_icons.insert(0, "cloud-upload")
+        
+        selected = option_menu(
+            menu_title="Navegación",
+            options=menu_options,
+            icons=menu_icons,
+            menu_icon="cast",
+            default_index=0,
+        )
+        
+        st.markdown("---")
+        
+        # Estado del sistema
+        st.markdown("### 📊 Estado del Sistema")
+        if local_connected:
+            st.success("🟢 Local: Conectado")
+        else:
+            st.error("🔴 Local: No disponible")
+        if supabase_connected:
+            st.success("🟢 Supabase: disponible")
+        else:
+            st.caption("Supabase: no conectado (opcional)")
+        
+        st.markdown("---")
+        
+        # Información
+        st.markdown("### ℹ️ Información")
+        if is_cloud:
+            st.info("""
+            **Modo Nube:** Esta aplicación lee datos desde Supabase. 
+            Para cargar nuevos datos, usa la aplicación local.
+            """)
+        else:
+            st.info("""
+            **Trabajo en local:** Importá los Excel y mirá el dashboard. 
+            No hace falta internet ni Supabase para el día a día.
+            """)
+    
+    # Contenido principal según selección
+    if selected == "📥 Importar Excel":
+        importar.show()
+    elif selected == "📊 Dashboard":
+        dashboard.show()
+    elif selected == "📋 Órdenes":
+        ordenes.show()
+    elif selected == "📊 Ejecución":
+        ejecucion.show()
+    elif selected == "📦 Stock":
+        stock.show()
+    elif selected == "📝 Pedidos":
+        pedidos.show()
 
-# --- EJECUTAR NAVEGACIÓN ---
-pg.run()
+
+if __name__ == "__main__":
+    main()
