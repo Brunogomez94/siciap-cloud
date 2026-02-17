@@ -28,6 +28,22 @@ CARGA = [
 
 
 def show():
+    import os
+    # Verificar si estamos en Streamlit Cloud (no debería aparecer aquí, pero por seguridad)
+    is_cloud = os.getenv('STREAMLIT_SHARING_MODE') == 'sharing'
+    
+    if is_cloud:
+        st.error("⚠️ Esta funcionalidad solo está disponible en la aplicación local.")
+        st.info("""
+        **Para importar Excel:**
+        1. Abre la aplicación local en tu PC: `scripts\\run_frontend.bat`
+        2. Ve a la página "Importar Excel"
+        3. Sube tus archivos desde allí
+        
+        Los datos se guardarán en PostgreSQL local y luego podrás sincronizarlos a Supabase.
+        """)
+        return
+    
     st.title("Importar Excel")
     st.markdown("Subí los 5 archivos Excel (desde Descargas o donde los tengas). Se cargan en la base **local**; el dashboard y las pestañas usan estos datos.")
     st.markdown("---")

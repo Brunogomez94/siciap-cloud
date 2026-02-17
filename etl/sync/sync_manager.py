@@ -96,10 +96,12 @@ class SyncManager:
             logger.info(f"Leídas {len(df)} filas de {schema}.{table_name}")
             
             # Escribir datos a Supabase
-            with self.get_supabase_connection() as supabase_conn:
-                # Verificar que la tabla existe en Supabase
+            supabase_conn = self.get_supabase_connection()
+            try:
+                # Verificar que la tabla existe en Supabase (usar autocommit para evitar transacciones)
                 if not self._table_exists_in_supabase(supabase_conn, table_name):
                     logger.warning(f"Tabla {table_name} no existe en Supabase, saltando sincronización")
+                    supabase_conn.close()
                     return False
                 
                 # Obtener columnas que existen en Supabase (filtrar antes de insertar)
@@ -109,6 +111,7 @@ class SyncManager:
                 
                 if not valid_cols:
                     logger.error(f"Ninguna columna del DataFrame existe en Supabase.{table_name}. Tabla Supabase: {supabase_cols}")
+                    supabase_conn.close()
                     return False
                 
                 missing = set(supabase_cols) - set(valid_cols)
@@ -117,6 +120,10 @@ class SyncManager:
                 
                 df_filtered = df[valid_cols].copy()
                 logger.info(f"Filtrando a {len(valid_cols)} columnas válidas de {len(df.columns)} originales")
+                
+                # Cerrar conexión anterior y crear una nueva para la transacción
+                supabase_conn.close()
+                supabase_conn = self.get_supabase_connection()
                 
                 # Limpiar tabla en Supabase (usar DELETE en lugar de TRUNCATE para mejor compatibilidad)
                 trans = supabase_conn.begin()
@@ -139,12 +146,19 @@ class SyncManager:
                     
                     trans.commit()
                     logger.info(f"[OK] Tabla {table_name} sincronizada exitosamente")
+                    supabase_conn.close()
                     return True
                 
                 except Exception as e:
                     trans.rollback()
                     logger.error(f"Error sincronizando {table_name}: {e}", exc_info=True)
+                    supabase_conn.close()
                     return False
+            except Exception as e:
+                logger.error(f"Error obteniendo conexión Supabase: {e}", exc_info=True)
+                if supabase_conn:
+                    supabase_conn.close()
+                return False
         
         except Exception as e:
             logger.error(f"Error en sincronización de {table_name}: {e}", exc_info=True)
