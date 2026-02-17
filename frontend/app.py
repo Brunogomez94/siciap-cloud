@@ -56,16 +56,16 @@ st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Sist
 
 # --- DEFINICIÓN DE PÁGINAS ---
 # Mapeamos archivos a nombres profesionales con iconos
-# IMPORTANTE: st.Page() busca archivos relativos al directorio donde está este archivo (frontend/)
-# Entonces desde frontend/app.py, las páginas están en pages/ (no frontend/pages/)
-pg_dashboard = st.Page("pages/dashboard.py", title="📊 Dashboard General", icon="📈", default=True)
-pg_ordenes = st.Page("pages/ordenes.py", title="📋 Órdenes de Compra", icon="📋")
-pg_ejecucion = st.Page("pages/ejecucion.py", title="📊 Ejecución Contratos", icon="📊")
-pg_stock = st.Page("pages/stock.py", title="📦 Stock y Parques", icon="📦")
-pg_pedidos = st.Page("pages/pedidos.py", title="📝 Pedidos", icon="📝")
+# Usamos rutas absolutas desde la raíz del proyecto para evitar problemas de rutas relativas
+pages_dir = root_dir / "frontend" / "pages"
+pg_dashboard = st.Page(str(pages_dir / "dashboard.py"), title="📊 Dashboard General", icon="📈", default=True)
+pg_ordenes = st.Page(str(pages_dir / "ordenes.py"), title="📋 Órdenes de Compra", icon="📋")
+pg_ejecucion = st.Page(str(pages_dir / "ejecucion.py"), title="📊 Ejecución Contratos", icon="📊")
+pg_stock = st.Page(str(pages_dir / "stock.py"), title="📦 Stock y Parques", icon="📦")
+pg_pedidos = st.Page(str(pages_dir / "pedidos.py"), title="📝 Pedidos", icon="📝")
 
 # Esta es la página conflictiva - solo en local
-pg_importar = st.Page("pages/importar.py", title="📥 Importar Excel", icon="📥")
+pg_importar = st.Page(str(pages_dir / "importar.py"), title="📥 Importar Excel", icon="📥")
 
 # --- LÓGICA DEL MENÚ ---
 if ES_LOCAL and local_connected:
