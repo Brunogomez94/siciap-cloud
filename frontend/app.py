@@ -61,18 +61,18 @@ st.markdown('<h1 class="main-header">🏥 SICIAP Cloud</h1>', unsafe_allow_html=
 st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Sistema Integrado de Gestión - Arquitectura Híbrida</p>', unsafe_allow_html=True)
 
 # --- DEFINICIÓN DE PÁGINAS ---
-# Estas páginas las ve todo el mundo (Jefes, Web, Tú)
-# Las rutas son relativas al directorio raíz del proyecto
+# CORRECCIÓN: Rutas relativas a app.py (sin "frontend/")
+# Como app.py está en frontend/, las páginas están en pages/ (relativo a frontend/)
 pages_publicas = [
-    st.Page("frontend/pages/dashboard.py", title="📊 Dashboard General", icon="📈", default=True),
-    st.Page("frontend/pages/ordenes.py", title="📋 Órdenes de Compra", icon="📋"),
-    st.Page("frontend/pages/ejecucion.py", title="📊 Ejecución Contratos", icon="📊"),
-    st.Page("frontend/pages/stock.py", title="📦 Stock y Parques", icon="📦"),
-    st.Page("frontend/pages/pedidos.py", title="📝 Pedidos", icon="📝"),
+    st.Page("pages/dashboard.py", title="📊 Dashboard General", icon="📈", default=True),
+    st.Page("pages/ordenes.py", title="📋 Órdenes de Compra", icon="📋"),
+    st.Page("pages/ejecucion.py", title="📊 Ejecución Contratos", icon="📊"),
+    st.Page("pages/stock.py", title="📦 Stock y Parques", icon="📦"),
+    st.Page("pages/pedidos.py", title="📝 Pedidos", icon="📝"),
 ]
 
 # Esta página es SOLO PARA TI (Local)
-page_admin = st.Page("frontend/pages/importar.py", title="📥 Importar Excel (Local)", icon="💾")
+page_admin = st.Page("pages/importar.py", title="📥 Importar Excel (Local)", icon="💾")
 
 # --- CONSTRUCCIÓN DEL MENÚ ---
 if ES_LOCAL:
