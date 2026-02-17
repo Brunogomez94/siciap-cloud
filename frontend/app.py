@@ -56,8 +56,8 @@ st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Sist
 
 # --- DEFINICIÓN DE PÁGINAS ---
 # Mapeamos archivos a nombres profesionales con iconos
-# Las rutas son relativas al directorio raíz del proyecto (donde Streamlit ejecuta desde)
-# En Streamlit Cloud, el directorio de trabajo es la raíz, así que usamos rutas desde ahí
+# IMPORTANTE: st.Page() busca archivos relativos al directorio donde está este archivo (frontend/)
+# Entonces desde frontend/app.py, las páginas están en pages/ (no frontend/pages/)
 pg_dashboard = st.Page("pages/dashboard.py", title="📊 Dashboard General", icon="📈", default=True)
 pg_ordenes = st.Page("pages/ordenes.py", title="📋 Órdenes de Compra", icon="📋")
 pg_ejecucion = st.Page("pages/ejecucion.py", title="📊 Ejecución Contratos", icon="📊")
