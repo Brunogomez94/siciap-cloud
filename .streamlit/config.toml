@@ -1,0 +1,18 @@
+# Configuración de Streamlit para despliegue en Streamlit Cloud
+# Este archivo se usa cuando despliegas en streamlit.io
+
+[theme]
+primaryColor = "#0e4f3c"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f6"
+textColor = "#262730"
+font = "sans serif"
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false

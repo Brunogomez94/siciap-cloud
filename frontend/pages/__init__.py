@@ -1,0 +1,3 @@
+"""
+Páginas del frontend Streamlit
+"""
