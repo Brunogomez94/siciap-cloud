@@ -68,3 +68,7 @@ def show():
     if st.button("🔄 Refrescar"):
         st.cache_data.clear()
         st.rerun()
+
+
+# Cuando Streamlit ejecuta este archivo directamente (st.Page), ejecutar show()
+show()

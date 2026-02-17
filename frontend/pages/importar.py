@@ -75,3 +75,8 @@ def show():
 
     st.markdown("---")
     st.caption("Después de cargar, entrá al Dashboard y a Órdenes / Ejecución / Stock / Pedidos para ver los resultados. Todo funciona en local; Supabase es opcional si más adelante querés sincronizar.")
+
+
+# Cuando Streamlit ejecuta este archivo directamente (st.Page), ejecutar show()
+# st.Page() ejecuta el archivo como script principal, así que llamamos show() siempre
+show()
