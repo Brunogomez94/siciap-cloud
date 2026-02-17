@@ -56,15 +56,16 @@ st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Sist
 
 # --- DEFINICIÓN DE PÁGINAS ---
 # Mapeamos archivos a nombres profesionales con iconos
-# Las rutas son relativas al directorio raíz del proyecto (donde Streamlit ejecuta)
-pg_dashboard = st.Page("frontend/pages/dashboard.py", title="📊 Dashboard General", icon="📈", default=True)
-pg_ordenes = st.Page("frontend/pages/ordenes.py", title="📋 Órdenes de Compra", icon="📋")
-pg_ejecucion = st.Page("frontend/pages/ejecucion.py", title="📊 Ejecución Contratos", icon="📊")
-pg_stock = st.Page("frontend/pages/stock.py", title="📦 Stock y Parques", icon="📦")
-pg_pedidos = st.Page("frontend/pages/pedidos.py", title="📝 Pedidos", icon="📝")
+# Las rutas son relativas al directorio raíz del proyecto (donde Streamlit ejecuta desde)
+# En Streamlit Cloud, el directorio de trabajo es la raíz, así que usamos rutas desde ahí
+pg_dashboard = st.Page("pages/dashboard.py", title="📊 Dashboard General", icon="📈", default=True)
+pg_ordenes = st.Page("pages/ordenes.py", title="📋 Órdenes de Compra", icon="📋")
+pg_ejecucion = st.Page("pages/ejecucion.py", title="📊 Ejecución Contratos", icon="📊")
+pg_stock = st.Page("pages/stock.py", title="📦 Stock y Parques", icon="📦")
+pg_pedidos = st.Page("pages/pedidos.py", title="📝 Pedidos", icon="📝")
 
 # Esta es la página conflictiva - solo en local
-pg_importar = st.Page("frontend/pages/importar.py", title="📥 Importar Excel", icon="📥")
+pg_importar = st.Page("pages/importar.py", title="📥 Importar Excel", icon="📥")
 
 # --- LÓGICA DEL MENÚ ---
 if ES_LOCAL and local_connected:
