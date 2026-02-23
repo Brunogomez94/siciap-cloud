@@ -9,17 +9,38 @@ CREATE SCHEMA IF NOT EXISTS siciap;
 
 -- =============================================================================
 -- TABLA: ordenes
--- Descripción: Órdenes de compra y sus estados
+-- Descripción: Órdenes de compra y sus estados (compatible con siciap_app)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS siciap.ordenes (
     id SERIAL PRIMARY KEY,
-    id_llamado INTEGER NOT NULL,
-    llamado VARCHAR(255),
-    proveedor VARCHAR(255),
-    codigo VARCHAR(255),
-    item INTEGER,
-    saldo NUMERIC(18,2),
-    estado VARCHAR(100),
+    id_llamado BIGINT NOT NULL,
+    llamado TEXT,
+    p_unit NUMERIC(18,6),
+    fec_contrato VARCHAR(1000),
+    oc TEXT,
+    item TEXT,
+    codigo TEXT,
+    producto TEXT,
+    cant_oc NUMERIC(18,6),
+    monto_oc NUMERIC(18,6),
+    monto_recepcion NUMERIC(18,6),
+    cant_recep NUMERIC(18,6),
+    monto_saldo NUMERIC(18,6),
+    dias_de_atraso BIGINT,
+    estado TEXT,
+    stock TEXT,
+    referencia TEXT,
+    proveedor TEXT,
+    lugar_entrega_oc TEXT,
+    fec_ult_recep VARCHAR(1000),
+    fecha_recibido_proveedor VARCHAR(1000),
+    fecha_oc VARCHAR(1000),
+    saldo NUMERIC(18,6),
+    plazo_entrega TEXT,
+    tipo_vigencia TEXT,
+    vigencia TEXT,
+    det_recep TEXT,
+    -- Columnas adicionales para compatibilidad
     fecha_orden DATE,
     fecha_vencimiento DATE,
     observaciones TEXT,
@@ -33,22 +54,39 @@ CREATE INDEX IF NOT EXISTS idx_ordenes_estado ON siciap.ordenes(estado);
 
 -- =============================================================================
 -- TABLA: ejecucion
--- Descripción: Ejecución de contratos por ítem
+-- Descripción: Ejecución de contratos por ítem (compatible con siciap_app)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS siciap.ejecucion (
     id SERIAL PRIMARY KEY,
     id_llamado INTEGER NOT NULL,
     licitacion VARCHAR(255) NOT NULL,
+    proveedor VARCHAR(255),
     codigo VARCHAR(255) NOT NULL,
-    item INTEGER NOT NULL,
+    medicamento TEXT,
+    item TEXT,
+    cantidad_maxima NUMERIC(18,2),
+    cantidad_emitida NUMERIC(18,2),
+    cantidad_recepcionada NUMERIC(18,2),
+    cantidad_distribuida NUMERIC(18,2),
+    monto_adjudicado NUMERIC(18,2),
+    monto_emitido NUMERIC(18,2),
+    saldo NUMERIC(18,2),
+    porcentaje_emitido NUMERIC(18,2),
+    ejecucion_mayor_al_50 VARCHAR(10),
+    estado_stock VARCHAR(255),
+    estado_contrato VARCHAR(255),
+    cantidad_ampliacion NUMERIC(18,2),
+    porcentaje_ampliado NUMERIC(18,2),
+    porcentaje_ampliacion_emitido NUMERIC(18,2),
+    obs TEXT,
+    -- Columnas adicionales para compatibilidad
     cantidad_ejecutada NUMERIC(18,2) DEFAULT 0,
     precio_unitario NUMERIC(18,4),
     monto_total NUMERIC(18,2),
     fecha_ejecucion DATE,
     observaciones TEXT,
     creado_en TIMESTAMPTZ DEFAULT now(),
-    actualizado_en TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(id_llamado, licitacion, codigo, item)
+    actualizado_en TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_ejecucion_id_llamado ON siciap.ejecucion(id_llamado);
@@ -79,15 +117,28 @@ CREATE INDEX IF NOT EXISTS idx_datosejecucion_vigente ON siciap.datosejecucion(v
 
 -- =============================================================================
 -- TABLA: stock_critico
--- Descripción: Stock crítico de productos
+-- Descripción: Stock crítico de productos (compatible con siciap_app)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS siciap.stock_critico (
     id SERIAL PRIMARY KEY,
-    codigo VARCHAR(255) NOT NULL UNIQUE,
+    codigo VARCHAR(50) NOT NULL UNIQUE,
+    producto TEXT,
+    concentracion TEXT,
+    forma_farmaceutica TEXT,
+    presentacion TEXT,
+    clasificacion TEXT,
+    meses_en_movimiento INTEGER,
+    cantidad_distribuida NUMERIC(18,2),
+    stock_actual NUMERIC(18,2),
+    stock_reservado NUMERIC(18,2),
+    stock_disponible NUMERIC(18,2),
+    dmp NUMERIC(18,2),
+    estado_stock VARCHAR(50),
+    stock_hosp NUMERIC(18,2),
+    oc VARCHAR(255),
+    -- Columnas adicionales para compatibilidad
     descripcion TEXT,
-    stock_disponible NUMERIC(18,2) DEFAULT 0,
     stock_minimo NUMERIC(18,2) DEFAULT 0,
-    dmp NUMERIC(18,2),  -- Días de medicamento pendiente
     estado VARCHAR(50),  -- 'critico', 'bajo', 'normal'
     ultima_actualizacion TIMESTAMPTZ DEFAULT now()
 );
@@ -97,18 +148,32 @@ CREATE INDEX IF NOT EXISTS idx_stock_critico_estado ON siciap.stock_critico(esta
 
 -- =============================================================================
 -- TABLA: pedidos
--- Descripción: Pedidos pendientes
+-- Descripción: Pedidos pendientes (compatible con siciap_app)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS siciap.pedidos (
     id SERIAL PRIMARY KEY,
-    id_llamado INTEGER,
+    nro_pedido VARCHAR(255),
+    simese VARCHAR(255),
+    fecha_pedido DATE,
     codigo VARCHAR(255),
+    medicamento TEXT,
+    stock NUMERIC(18,2),
+    dmp NUMERIC(18,2),
+    cantidad NUMERIC(18,2),
+    meses_cantidad NUMERIC(18,2),
+    dias_transcurridos INTEGER,
+    estado VARCHAR(50),
+    prioridad VARCHAR(255),
+    nro_oc VARCHAR(255),
+    fecha_oc DATE,
+    opciones VARCHAR(255),
+    -- Columnas adicionales para compatibilidad
+    id_llamado INTEGER,
     item INTEGER,
     cantidad_solicitada NUMERIC(18,2),
     cantidad_pendiente NUMERIC(18,2),
     fecha_solicitud DATE,
     fecha_requerida DATE,
-    estado VARCHAR(50),  -- 'pendiente', 'en_proceso', 'completado'
     observaciones TEXT,
     creado_en TIMESTAMPTZ DEFAULT now(),
     actualizado_en TIMESTAMPTZ DEFAULT now()

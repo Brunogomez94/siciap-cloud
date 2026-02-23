@@ -1,91 +1,38 @@
 """
-Utilidades de conexión a base de datos para Streamlit
+Conexión a Supabase exclusivamente vía API REST (HTTPS 443).
+Cero SQLAlchemy, psycopg2 o puerto 5432.
+Credenciales en .streamlit/secrets.toml: SUPABASE_URL y SUPABASE_KEY.
 """
 import streamlit as st
-from sqlalchemy import create_engine, text
-from config.database import DatabaseConfig
-from config.supabase import SupabaseConfig
-
-
-def _set_search_path(conn):
-    """
-    Configura el search_path para que use el esquema siciap por defecto.
-    Esto evita errores cuando las tablas están en siciap.* y las consultas
-    no especifican el esquema.
-    """
-    try:
-        conn.execute(text("SET search_path TO siciap, public"))
-    except Exception:
-        # No bloquear si falla; simplemente seguirá usando el search_path por defecto
-        pass
-
-
-# Cache de conexiones
-@st.cache_resource
-def get_supabase_connection():
-    """
-    Obtiene conexión a Supabase (para visualización)
-    
-    Returns:
-        Conexión a Supabase
-    """
-    try:
-        supabase_config = SupabaseConfig()
-        if not supabase_config.is_configured():
-            st.warning("⚠️ Supabase no está configurado. Usando conexión local.")
-            return get_local_connection()
-        
-        conn_str = supabase_config.get_connection_string()
-        engine = create_engine(conn_str, connect_args={"client_encoding": "utf8"})
-        conn = engine.connect()
-        _set_search_path(conn)
-        return conn
-    except Exception as e:
-        err_msg = str(e).split("\n")[0][:120]  # Primera línea, acotada
-        st.warning(f"Supabase no disponible ({err_msg}…). Usando PostgreSQL local.")
-        return get_local_connection()
+from supabase import create_client, Client
 
 
 @st.cache_resource
-def get_local_connection():
-    """
-    Obtiene conexión a PostgreSQL local (para ETL y modo local)
-    
-    Returns:
-        Conexión a PostgreSQL local
-    """
+def get_supabase_client() -> Client:
     try:
-        db_config = DatabaseConfig()
-        conn_str = db_config.get_connection_string()
-        engine = create_engine(conn_str, connect_args={"client_encoding": "utf8"})
-        conn = engine.connect()
-        _set_search_path(conn)
-        return conn
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
     except Exception as e:
-        st.error(f"Error conectando a PostgreSQL local: {e}")
+        st.error(f"Error al configurar cliente Supabase: {e}")
         return None
 
 
 def test_connection(use_supabase: bool = True) -> bool:
-    """
-    Prueba la conexión a la base de datos
-    
-    Args:
-        use_supabase: Si usar Supabase (True) o local (False)
-    
-    Returns:
-        True si la conexión es exitosa
-    """
+    """Prueba la conexión vía API REST. Compatible con app.py."""
+    if not use_supabase:
+        return False
     try:
-        if use_supabase:
-            conn = get_supabase_connection()
-        else:
-            conn = get_local_connection()
-        
-        if conn is None:
+        client = get_supabase_client()
+        if client is None:
             return False
-        
-        conn.execute(text("SELECT 1"))
+        # Prueba mínima: listar una fila de una tabla existente
+        r = client.table("vista_tablero_principal").select("id_llamado").limit(1).execute()
         return True
     except Exception:
         return False
+
+
+# Alias para compatibilidad: el resto del proyecto puede seguir importando este nombre.
+# Ahora devuelve el cliente de la API (no una conexión SQLAlchemy).
+get_supabase_connection = get_supabase_client

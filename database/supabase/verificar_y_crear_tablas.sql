@@ -1,14 +1,29 @@
 -- =============================================================================
--- SICIAP CLOUD - Esquema de Base de Datos Supabase (Nube)
--- Versión: 2.0
--- Descripción: Esquema completo para Supabase (schema public, sin siciap.)
--- Basado en database/local/schema.sql
+-- VERIFICAR Y CREAR TABLAS SI NO EXISTEN
+-- Ejecuta este script si las tablas no aparecen después de ejecutar schema.sql
 -- =============================================================================
 
--- =============================================================================
+-- Verificar qué tablas existen actualmente
+SELECT 
+    tablename,
+    schemaname
+FROM pg_catalog.pg_tables
+WHERE schemaname = 'public'
+  AND tablename IN (
+      'ordenes', 
+      'ejecucion', 
+      'datosejecucion', 
+      'stock_critico', 
+      'pedidos', 
+      'cantidad_solicitada', 
+      'vencimientos_parques'
+  )
+ORDER BY tablename;
+
+-- Si no aparecen las 7 tablas, ejecuta el contenido de schema.sql completo
+-- O ejecuta este script que crea solo las tablas faltantes:
+
 -- TABLA: ordenes
--- Descripción: Órdenes de compra y sus estados
--- =============================================================================
 CREATE TABLE IF NOT EXISTS public.ordenes (
     id SERIAL PRIMARY KEY,
     id_llamado BIGINT NOT NULL,
@@ -49,10 +64,7 @@ CREATE INDEX IF NOT EXISTS idx_ordenes_id_llamado ON public.ordenes(id_llamado);
 CREATE INDEX IF NOT EXISTS idx_ordenes_codigo ON public.ordenes(codigo);
 CREATE INDEX IF NOT EXISTS idx_ordenes_estado ON public.ordenes(estado);
 
--- =============================================================================
 -- TABLA: ejecucion
--- Descripción: Ejecución de contratos por ítem
--- =============================================================================
 CREATE TABLE IF NOT EXISTS public.ejecucion (
     id SERIAL PRIMARY KEY,
     id_llamado INTEGER NOT NULL,
@@ -89,10 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_ejecucion_id_llamado ON public.ejecucion(id_llama
 CREATE INDEX IF NOT EXISTS idx_ejecucion_codigo ON public.ejecucion(codigo);
 CREATE INDEX IF NOT EXISTS idx_ejecucion_item ON public.ejecucion(item);
 
--- =============================================================================
 -- TABLA: datosejecucion
--- Descripción: Datos generales de ejecución por llamado
--- =============================================================================
 CREATE TABLE IF NOT EXISTS public.datosejecucion (
     id_llamado INTEGER PRIMARY KEY,
     llamado VARCHAR(255),
@@ -111,10 +120,7 @@ CREATE TABLE IF NOT EXISTS public.datosejecucion (
 
 CREATE INDEX IF NOT EXISTS idx_datosejecucion_vigente ON public.datosejecucion(vigente);
 
--- =============================================================================
 -- TABLA: stock_critico
--- Descripción: Stock crítico de productos
--- =============================================================================
 CREATE TABLE IF NOT EXISTS public.stock_critico (
     id SERIAL PRIMARY KEY,
     codigo TEXT NOT NULL,
@@ -141,10 +147,7 @@ CREATE TABLE IF NOT EXISTS public.stock_critico (
 CREATE INDEX IF NOT EXISTS idx_stock_critico_codigo ON public.stock_critico(codigo);
 CREATE INDEX IF NOT EXISTS idx_stock_critico_estado ON public.stock_critico(estado);
 
--- =============================================================================
 -- TABLA: pedidos
--- Descripción: Pedidos pendientes
--- =============================================================================
 CREATE TABLE IF NOT EXISTS public.pedidos (
     id SERIAL PRIMARY KEY,
     nro_pedido VARCHAR(255),
@@ -177,10 +180,7 @@ CREATE INDEX IF NOT EXISTS idx_pedidos_id_llamado ON public.pedidos(id_llamado);
 CREATE INDEX IF NOT EXISTS idx_pedidos_codigo ON public.pedidos(codigo);
 CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON public.pedidos(estado);
 
--- =============================================================================
 -- TABLA: cantidad_solicitada
--- Descripción: Cantidad solicitada y fecha "Ver en fecha" por ítem
--- =============================================================================
 CREATE TABLE IF NOT EXISTS public.cantidad_solicitada (
     id_llamado INTEGER NOT NULL,
     licitacion VARCHAR(255) NOT NULL,
@@ -196,10 +196,7 @@ CREATE INDEX IF NOT EXISTS idx_cantidad_solicitada_emitir_en
     ON public.cantidad_solicitada(emitir_en) 
     WHERE emitir_en IS NOT NULL;
 
--- =============================================================================
 -- TABLA: vencimientos_parques
--- Descripción: Vencimientos de productos en parques
--- =============================================================================
 CREATE TABLE IF NOT EXISTS public.vencimientos_parques (
     id SERIAL PRIMARY KEY,
     codigo VARCHAR(255) NOT NULL,
@@ -215,13 +212,20 @@ CREATE TABLE IF NOT EXISTS public.vencimientos_parques (
 CREATE INDEX IF NOT EXISTS idx_vencimientos_codigo ON public.vencimientos_parques(codigo);
 CREATE INDEX IF NOT EXISTS idx_vencimientos_fecha ON public.vencimientos_parques(fec_vencimiento);
 
--- =============================================================================
--- COMENTARIOS EN TABLAS
--- =============================================================================
-COMMENT ON TABLE public.ordenes IS 'Órdenes de compra y sus estados';
-COMMENT ON TABLE public.ejecucion IS 'Ejecución de contratos por ítem';
-COMMENT ON TABLE public.datosejecucion IS 'Datos generales de ejecución por llamado';
-COMMENT ON TABLE public.stock_critico IS 'Stock crítico de productos';
-COMMENT ON TABLE public.pedidos IS 'Pedidos pendientes';
-COMMENT ON TABLE public.cantidad_solicitada IS 'Cantidad solicitada y fecha "Ver en fecha" por ítem';
-COMMENT ON TABLE public.vencimientos_parques IS 'Vencimientos de productos en parques';
+-- Verificar nuevamente después de crear
+SELECT 
+    tablename,
+    schemaname,
+    '✅ Creada' AS estado
+FROM pg_catalog.pg_tables
+WHERE schemaname = 'public'
+  AND tablename IN (
+      'ordenes', 
+      'ejecucion', 
+      'datosejecucion', 
+      'stock_critico', 
+      'pedidos', 
+      'cantidad_solicitada', 
+      'vencimientos_parques'
+  )
+ORDER BY tablename;

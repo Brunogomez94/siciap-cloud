@@ -128,7 +128,7 @@ class SyncManager:
                 # Limpiar tabla en Supabase (usar DELETE en lugar de TRUNCATE para mejor compatibilidad)
                 trans = supabase_conn.begin()
                 try:
-                    supabase_conn.execute(text(f"DELETE FROM {table_name}"))
+                    supabase_conn.execute(text(f"DELETE FROM public.{table_name}"))
                     
                     # Insertar datos en lotes
                     total_rows = len(df_filtered)
@@ -188,14 +188,11 @@ class SyncManager:
         
         logger.info(f"Sincronización completada: {successful}/{total} tablas exitosas")
         
-        # Refrescar vista materializada si existe
-        try:
-            with self.get_supabase_connection() as supabase_conn:
-                supabase_conn.execute(text("SELECT refresh_vista_unificada()"))
-                supabase_conn.commit()
-                logger.info("Vista materializada 'vista_unificada' refrescada")
-        except Exception as e:
-            logger.warning(f"No se pudo refrescar vista_unificada (puede no existir): {e}")
+        # Refrescar vista materializada si existe (opcional, no crítico)
+        # Nota: Esta función solo existe si se creó la vista materializada manualmente en Supabase
+        # Por ahora, simplemente omitimos este paso para evitar errores
+        # Si necesitas la vista materializada, créala manualmente en Supabase con el script correspondiente
+        pass  # Comentado temporalmente hasta que se cree la vista materializada en Supabase
         
         return results
     
@@ -219,7 +216,7 @@ class SyncManager:
             with self.get_supabase_connection() as supabase_conn:
                 try:
                     result = supabase_conn.execute(
-                        text(f"SELECT MAX({timestamp_column}) as max_ts FROM {table_name}")
+                        text(f"SELECT MAX({timestamp_column}) as max_ts FROM public.{table_name}")
                     ).fetchone()
                     last_sync = result[0] if result and result[0] else None
                 except Exception:
@@ -291,7 +288,7 @@ class SyncManager:
             # Contar registros en Supabase
             with self.get_supabase_connection() as supabase_conn:
                 supabase_count = supabase_conn.execute(
-                    text(f"SELECT COUNT(*) FROM {table_name}")
+                    text(f"SELECT COUNT(*) FROM public.{table_name}")
                 ).scalar()
             
             return {

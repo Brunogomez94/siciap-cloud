@@ -10,15 +10,29 @@ from frontend.utils.db_connection import get_supabase_connection
 
 @st.cache_data(ttl=300)
 def load_stock():
-    """Carga datos de stock"""
+    """Carga datos de stock. Conexión nueva; se cierra al terminar."""
+    conn = None
     try:
         conn = get_supabase_connection()
-        query = text("SELECT * FROM stock_critico ORDER BY stock_disponible ASC")
+        if conn is None:
+            return pd.DataFrame()
+        query = text("SELECT * FROM public.stock_critico ORDER BY stock_disponible ASC")
         df = pd.read_sql(query, conn)
         return df
     except Exception as e:
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         st.error(f"Error cargando stock: {e}")
         return pd.DataFrame()
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def show():
@@ -61,14 +75,14 @@ def show():
         fig = px.bar(
             x=estado_counts.index,
             y=estado_counts.values,
-            labels={'x': 'Estado', 'y': 'Cantidad'},
             color=estado_counts.index,
+            labels={'x': 'Estado', 'y': 'Cantidad'},
             color_discrete_map={'critico': 'red', 'bajo': 'orange', 'normal': 'green'}
         )
         st.plotly_chart(fig, use_container_width=True)
     
     # Tabla
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width='stretch', hide_index=True)
     
     if st.button("🔄 Refrescar"):
         st.cache_data.clear()

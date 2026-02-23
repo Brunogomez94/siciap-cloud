@@ -78,14 +78,14 @@ psql -U postgres -d siciap_local -f database\local\schema.sql
 
 ### 4. Ejecutar Aplicación
 
+Desde la carpeta raíz del proyecto (`siciap-cloud`):
+
 ```bash
-# Opción 1: Script batch (Windows)
+# Windows (desde siciap-cloud)
+cd "PROYECTOS VARIOS\siciap-cloud"
 scripts\run_frontend.bat
 
-# Opción 2: PowerShell
-scripts\run_frontend.ps1
-
-# Opción 3: Manual
+# O manual
 streamlit run frontend/app.py
 ```
 
@@ -134,15 +134,12 @@ El script `smoke_test.py` verifica:
 
 Ejecuta antes de desplegar para asegurar que todo funciona.
 
-## 🚀 Despliegue
+## 🚀 Despliegue en Streamlit Cloud
 
-Ver `DEPLOY.md` para instrucciones completas de despliegue a Streamlit Cloud.
-
-**Resumen:**
-1. Sube código a GitHub
-2. Crea app en Streamlit Cloud
-3. Configura variables de entorno en Streamlit Cloud Secrets
-4. ¡Listo! Tu app estará pública
+1. Sube el código a GitHub (repositorio `siciap-cloud`).
+2. En [share.streamlit.io](https://share.streamlit.io): **New app** → Repo `tu-usuario/siciap-cloud`, branch `main`, Main file `frontend/app.py`.
+3. En **Secrets** (TOM format) agrega las variables de `.env` (DB local y Supabase). Usa el **Session pooler** de Supabase: `SUPABASE_DB_HOST=aws-1-us-east-1.pooler.supabase.com`, `SUPABASE_DB_USER=postgres.tu_project_ref`.
+4. Deploy. La app en la nube solo lee de Supabase; importar Excel sigue siendo local.
 
 ## 📁 Estructura del Proyecto
 
@@ -178,13 +175,6 @@ Aplica el schema SQL correspondiente (local o Supabase).
 - Usa Session Pooler si estás en red restrictiva
 - El sistema funciona en modo local sin Supabase
 
-## 📝 Documentación Adicional
-
-- `AUDITORIA_TECNICA.md` - Análisis técnico completo del proyecto
-- `DEPLOY.md` - Guía de despliegue a Streamlit Cloud
-- `ORDEN_PASOS.md` - Orden de pasos para setup inicial
-- `CHECKLIST_INSTALACION.md` - Checklist de instalación
-
 ## 📄 Licencia
 
 Este proyecto es de uso interno.
@@ -195,4 +185,4 @@ Desarrollado para gestión logística del MSPBS.
 
 ---
 
-**Estado:** ✅ Listo para Producción (95% completo)
+**Estado:** En producción. Documentación unificada en este README.

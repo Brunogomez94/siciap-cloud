@@ -65,6 +65,8 @@ st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Sist
 # Como app.py está en frontend/, las páginas están en pages/ (relativo a frontend/)
 pages_publicas = [
     st.Page("pages/dashboard.py", title="📊 Dashboard General", icon="📈", default=True),
+    st.Page("pages/dashboard_principal.py", title="📈 Dashboard Principal", icon="📊"),
+    st.Page("pages/dashboard_editable.py", title="✏️ Dashboard Editable", icon="✏️"),
     st.Page("pages/ordenes.py", title="📋 Órdenes de Compra", icon="📋"),
     st.Page("pages/ejecucion.py", title="📊 Ejecución Contratos", icon="📊"),
     st.Page("pages/stock.py", title="📦 Stock y Parques", icon="📦"),

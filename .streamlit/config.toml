@@ -11,7 +11,8 @@ font = "sans serif"
 [server]
 headless = true
 port = 8501
-enableCORS = false
+# CORS debe ser true cuando XSRF está activo (protección CSRF)
+enableCORS = true
 enableXsrfProtection = true
 
 [browser]

@@ -109,37 +109,18 @@ class ExcelReader:
         return None
     
     def _clean_headers(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Limpia los headers del DataFrame"""
-        # Eliminar filas duplicadas en headers
+        """Limpia los headers del DataFrame preservando los nombres originales"""
+        # NO normalizar nombres de columnas aquí - dejar que los procesadores manejen el mapeo
+        # Solo limpiar espacios en blanco al inicio/final
         if len(df.columns) > 0:
-            # Normalizar nombres de columnas
-            df.columns = [self._normalize_column_name(col) for col in df.columns]
+            df.columns = [str(col).strip() if pd.notna(col) else f'unnamed_{i}' 
+                         for i, col in enumerate(df.columns)]
         
         # Eliminar filas completamente vacías al inicio
         while len(df) > 0 and df.iloc[0].isna().all():
             df = df.iloc[1:].reset_index(drop=True)
         
         return df
-    
-    def _normalize_column_name(self, col_name: str) -> str:
-        """Normaliza el nombre de una columna"""
-        if pd.isna(col_name):
-            return 'unnamed'
-        
-        col_str = str(col_name).strip()
-        
-        # Remover acentos y caracteres especiales
-        import unicodedata
-        col_str = unicodedata.normalize('NFKD', col_str)
-        col_str = col_str.encode('ascii', 'ignore').decode('ascii')
-        
-        # Convertir a minúsculas y reemplazar espacios
-        col_str = col_str.lower().replace(' ', '_')
-        
-        # Remover caracteres no válidos
-        col_str = ''.join(c for c in col_str if c.isalnum() or c == '_')
-        
-        return col_str if col_str else 'unnamed'
     
     def get_sheet_names(self, file_content: bytes) -> List[str]:
         """Obtiene los nombres de las hojas del archivo Excel"""

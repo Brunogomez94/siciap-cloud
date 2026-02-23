@@ -9,15 +9,29 @@ from frontend.utils.db_connection import get_supabase_connection
 
 @st.cache_data(ttl=300)
 def load_ejecucion():
-    """Carga datos de ejecución"""
+    """Carga datos de ejecución. Conexión nueva; se cierra al terminar."""
+    conn = None
     try:
         conn = get_supabase_connection()
-        query = text("SELECT * FROM ejecucion ORDER BY fecha_ejecucion DESC LIMIT 1000")
+        if conn is None:
+            return pd.DataFrame()
+        query = text("SELECT * FROM public.ejecucion ORDER BY fecha_ejecucion DESC LIMIT 1000")
         df = pd.read_sql(query, conn)
         return df
     except Exception as e:
+        if conn is not None:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         st.error(f"Error cargando ejecución: {e}")
         return pd.DataFrame()
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def show():
@@ -56,7 +70,7 @@ def show():
             st.metric("Monto Total", f"${total_monto:,.2f}")
     
     # Tabla
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width='stretch', hide_index=True)
     
     if st.button("🔄 Refrescar"):
         st.cache_data.clear()
