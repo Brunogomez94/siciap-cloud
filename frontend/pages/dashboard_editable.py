@@ -146,24 +146,37 @@ def _render_gestion_pedidos():
                 keep='first'
             ).drop(columns=['_completitud'], errors='ignore')
 
-    # Renombrar columnas para mostrar (incluir estado_parque y distribucion si existen)
+    # Títulos profesionales para la grilla (no snake_case ni MAYÚSCULAS sueltas)
     df_display = df.copy()
-    df_display = df_display.rename(columns={
-        'codigo': 'COD',
-        'producto': 'PRODUCTO',
-        'licitacion': 'LICITACION',
-        'id_llamado': 'ID LLAMADO',
-        'item': 'ITEM',
-        'cantidad_solicitada': 'CANTIDAD SOLICITADA',
-        'ver_en_fecha': 'VER EN FECHA',
-        'cobertura_meses': 'COBERTURA (MESES)',
-        'nivel_stock': 'NIVEL STOCK',
-        'stock_actual': 'STOCK ACTUAL',
+    rename_map = {
+        'id_llamado': 'ID Llamado',
+        'licitacion': 'Licitación',
+        'nombre_llamado': 'Nombre del Llamado',
+        'codigo': 'Código',
+        'producto': 'Producto',
+        'proveedor': 'Proveedor',
+        'cantidad_maxima': 'Cantidad máxima',
+        'cantidad_emitida': 'Cantidad emitida',
+        'saldo_contrato': 'Saldo contrato',
+        'porcentaje_emitido': '% Emitido',
+        'precio_unitario': 'Precio unitario',
+        'item': 'Ítem',
+        'dirigido_a': 'Dirigido a',
+        'lugar': 'Lugar',
+        'vigente': 'Vigente',
+        'pendiente_entrega': 'Pendiente entrega',
+        'stock_actual': 'Stock actual',
         'dmp_actual': 'DMP',
-    })
+        'nivel_stock': 'Nivel stock',
+        'cantidad_solicitada': 'Cantidad solicitada',
+        'ver_en_fecha': 'Ver en fecha',
+        'comentario': 'Comentario',
+        'cobertura_meses': 'Cobertura (meses)',
+    }
+    df_display = df_display.rename(columns={k: v for k, v in rename_map.items() if k in df_display.columns})
 
-    if 'VER EN FECHA' not in df_display.columns:
-        df_display['VER EN FECHA'] = pd.NaT
+    if 'Ver en fecha' not in df_display.columns:
+        df_display['Ver en fecha'] = pd.NaT
 
     # Sin tope de órdenes: se cargan todas (por lotes). Espacio adaptable.
     total_reg = len(df_display)
@@ -177,8 +190,10 @@ def _render_gestion_pedidos():
         help="Aumentá cuando tengas más órdenes para ver más filas a la vez.",
     )
 
-    # Configurar AgGrid: columnas legibles, sin aplastar; títulos completos y wrap en celdas.
+    # Configurar AgGrid: columnas legibles, filtros tipo Excel (simples: una condición, sin AND/OR).
     gb = GridOptionsBuilder.from_dataframe(df_display)
+    # Filtro de texto por defecto: solo "Contiene" (una condición), sin AND/OR.
+    filter_params_texto = {"suppressAndOrCondition": True, "defaultOption": "contains"}
     gb.configure_default_column(
         resizable=True,
         filterable=True,
@@ -189,12 +204,24 @@ def _render_gestion_pedidos():
         autoHeaderHeight=True,
         wrapText=True,
         autoHeight=True,
+        filter="agTextColumnFilter",
+        filterParams=filter_params_texto,
     )
-    gb.configure_grid_options(rowHeight=40, domLayout="normal")
+    gb.configure_grid_options(rowHeight=32, domLayout="normal")
 
-    # --- Formato numérico profesional (separador de miles) ---
+    # Columnas numéricas: mismo filtro de texto (solo "Contiene") para buscar escribiendo el número sin elegir operador.
+    # Así evitás el desplegable "Equals / Greater than / Between..." y filtrás solo tipeando.
+    cols_numericas = ["ID Llamado", "Cantidad máxima", "Cantidad emitida", "Saldo contrato", "% Emitido", "Precio unitario", "Pendiente entrega", "Stock actual", "DMP", "Cantidad solicitada", "Cobertura (meses)"]
+    for col in cols_numericas:
+        if col in df_display.columns:
+            gb.configure_column(col, filter="agTextColumnFilter", filterParams=filter_params_texto)
+    # Fechas: filtro de fecha (Ver en fecha se configura después con editable y estilo).
+    if "Ver en fecha" in df_display.columns:
+        gb.configure_column("Ver en fecha", filter="agDateColumnFilter", filterParams={"suppressAndOrCondition": True})
+
+    # --- Formato numérico: miles (339.755) y % para porcentaje ---
     if JsCode is not None:
-        value_formatter_num = JsCode("""
+        value_formatter_miles = JsCode("""
         function(params) {
             if (params.value == null || params.value === '') return '';
             var n = Number(params.value);
@@ -202,11 +229,22 @@ def _render_gestion_pedidos():
             return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
         }
         """)
-        for col in ["CANTIDAD SOLICITADA", "COBERTURA (MESES)", "STOCK ACTUAL", "DMP"]:
+        value_formatter_pct = JsCode("""
+        function(params) {
+            if (params.value == null || params.value === '') return '';
+            var n = Number(params.value);
+            if (isNaN(n)) return params.value;
+            return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + '%';
+        }
+        """)
+        cols_miles = ["ID Llamado", "Cantidad máxima", "Cantidad emitida", "Saldo contrato", "Stock actual", "DMP", "Cantidad solicitada", "Pendiente entrega", "Precio unitario", "Cobertura (meses)"]
+        for col in cols_miles:
             if col in df_display.columns:
-                gb.configure_column(col, valueFormatter=value_formatter_num)
+                gb.configure_column(col, valueFormatter=value_formatter_miles)
+        if "% Emitido" in df_display.columns:
+            gb.configure_column("% Emitido", valueFormatter=value_formatter_pct)
 
-    # --- Semáforos: estado_parque (si existe con nombre original) o NIVEL STOCK ---
+    # --- Semáforos: estado_parque (si existe) o Nivel stock ---
     if JsCode is not None:
         estado_jscode = JsCode("""
         function(params) {
@@ -226,15 +264,15 @@ def _render_gestion_pedidos():
         """)
         if "estado_parque" in df_display.columns:
             gb.configure_column("estado_parque", cellStyle=estado_jscode)
-        if "NIVEL STOCK" in df_display.columns:
-            gb.configure_column("NIVEL STOCK", cellStyle=estado_jscode)
+        if "Nivel stock" in df_display.columns:
+            gb.configure_column("Nivel stock", cellStyle=estado_jscode)
 
-        # --- Columna DMP / distribucion: resaltar como indicador clave ---
+        # --- Columna DMP: resaltar como indicador clave ---
         if "DMP" in df_display.columns:
             gb.configure_column("DMP", cellStyle={'backgroundColor': '#e8f4f8', 'fontWeight': 'bold'})
 
-    # --- Alertas de fechas: VER EN FECHA (pasada o próximos 15 días → rojo/amarillo), editable con fondo azulado ---
-    if "VER EN FECHA" in df_display.columns and JsCode is not None:
+    # --- Alertas de fechas: Ver en fecha (pasada o próximos 15 días → rojo/amarillo), editable ---
+    if "Ver en fecha" in df_display.columns and JsCode is not None:
         fecha_alerta_jscode = JsCode("""
         function(params) {
             if (!params.value) return { backgroundColor: '#e6f2ff' };
@@ -253,26 +291,54 @@ def _render_gestion_pedidos():
         }
         """)
         gb.configure_column(
-            "VER EN FECHA",
-            header_name="Ver en fecha",
+            "Ver en fecha",
             editable=True,
             cellEditor="agDateCellEditor",
             filter="agDateColumnFilter",
+            filterParams={"suppressAndOrCondition": True},
             cellStyle=fecha_alerta_jscode,
         )
 
-    # --- Columna editable CANTIDAD SOLICITADA: fondo azulado para saber dónde escribir ---
-    if "CANTIDAD SOLICITADA" in df_display.columns:
-        gb.configure_column("CANTIDAD SOLICITADA", editable=True, cellStyle={'backgroundColor': '#e6f2ff'})
+    # --- Columna editable Cantidad solicitada: fondo azulado ---
+    if "Cantidad solicitada" in df_display.columns:
+        gb.configure_column("Cantidad solicitada", editable=True, cellStyle={'backgroundColor': '#e6f2ff'})
 
-    if JsCode is not None and "COBERTURA (MESES)" in df_display.columns:
+    # --- Cobertura (meses) = (Stock actual + Cantidad solicitada) / DMP; se recalcula al editar cantidad ---
+    if JsCode is not None and "Cobertura (meses)" in df_display.columns:
+        gb.configure_column(
+            "Cobertura (meses)",
+            valueGetter=JsCode("""
+            function(params) {
+                var stock = params.data && params.data["Stock actual"];
+                var cant = params.data && params.data["Cantidad solicitada"];
+                var dmp = params.data && params.data["DMP"];
+                if (dmp == null || Number(dmp) === 0) return null;
+                var s = Number(stock) || 0;
+                var c = Number(cant) || 0;
+                var d = Number(dmp);
+                return (s + c) / d;
+            }
+            """),
+            valueFormatter=JsCode("""
+            function(params) {
+                if (params.value == null || params.value === '') return '';
+                var n = Number(params.value);
+                if (isNaN(n)) return params.value;
+                return n.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+            }
+            """),
+        )
         gb.configure_grid_options(
             getRowStyle=JsCode("""
 function(params) {
-  var cobertura = params.data && params.data["COBERTURA (MESES)"];
-  if (cobertura != null && cobertura < 1) {
-    return { backgroundColor: '#f8d7da' };
-  }
+  var d = params.data;
+  if (!d) return null;
+  var stock = Number(d["Stock actual"]) || 0;
+  var cant = Number(d["Cantidad solicitada"]) || 0;
+  var dmp = Number(d["DMP"]) || 0;
+  if (dmp === 0) return null;
+  var cobertura = (stock + cant) / dmp;
+  if (cobertura < 1) return { backgroundColor: '#f8d7da' };
   return null;
 }
 """)
@@ -284,7 +350,16 @@ function(params) {
 
     grid_options = gb.build()
 
-    # fit_columns_on_grid_load=False evita que AgGrid aplaste todas las columnas; scroll horizontal legible.
+    # Grilla: letra 10px, bordes finos negros y texto negro.
+    custom_css = {
+        ".ag-root": {"font-size": "10px !important", "color": "#000 !important"},
+        ".ag-cell": {"font-size": "10px !important", "line-height": "1.2 !important", "border": "1px solid #000 !important", "color": "#000 !important"},
+        ".ag-header-cell": {"font-size": "10px !important", "line-height": "1.2 !important", "border": "1px solid #000 !important", "color": "#000 !important"},
+        ".ag-header-cell-label": {"font-size": "10px !important", "color": "#000 !important"},
+        ".ag-theme-alpine .ag-cell": {"font-size": "10px !important", "border": "1px solid #000 !important", "color": "#000 !important"},
+        ".ag-theme-alpine .ag-header-cell": {"font-size": "10px !important", "border": "1px solid #000 !important", "color": "#000 !important"},
+    }
+
     grid_response = AgGrid(
         df_display,
         gridOptions=grid_options,
@@ -293,6 +368,7 @@ function(params) {
         data_return_mode=DataReturnMode.AS_INPUT,
         update_mode=GridUpdateMode.VALUE_CHANGED | GridUpdateMode.SELECTION_CHANGED,
         fit_columns_on_grid_load=False,
+        custom_css=custom_css,
         allow_unsafe_jscode=True,
         key="editable_aggrid_pedidos",
     )
@@ -309,16 +385,16 @@ function(params) {
             to_save = []
             for _, row in edited_df.iterrows():
                 try:
-                    id_ll = row.get("ID LLAMADO")
-                    lic = row.get("LICITACION")
-                    cod = row.get("COD")
-                    item = row.get("ITEM")
+                    id_ll = row.get("ID Llamado")
+                    lic = row.get("Licitación")
+                    cod = row.get("Código")
+                    item = row.get("Ítem")
 
                     if pd.isna(id_ll) or pd.isna(cod):
                         continue
 
-                    cantidad = float(pd.to_numeric(row.get("CANTIDAD SOLICITADA", 0), errors="coerce") or 0)
-                    ver_fecha = row.get("VER EN FECHA")
+                    cantidad = float(pd.to_numeric(row.get("Cantidad solicitada", 0), errors="coerce") or 0)
+                    ver_fecha = row.get("Ver en fecha")
 
                     if pd.notna(ver_fecha):
                         try:
