@@ -5,7 +5,7 @@ Solo API REST de Supabase (sin SQLAlchemy).
 """
 import streamlit as st
 import pandas as pd
-from frontend.utils.db_connection import get_supabase_client, fetch_all_data, fetch_vista_tablero, VISTA_TABLERO_LIMIT
+from frontend.utils.db_connection import get_supabase_client, fetch_all_data, fetch_vista_tablero_todos
 from datetime import datetime, date
 import time
 
@@ -19,13 +19,13 @@ except ImportError:
 
 
 @st.cache_data(ttl=300)
-def load_vista_unificada(limite=15000):
-    """Carga la vista unificada en una sola petición (vista pesada; paginación provoca timeout)."""
+def load_vista_unificada():
+    """Carga TODOS los registros de la vista por lotes (40k, 100k+ sin timeout)."""
     try:
         client = get_supabase_client()
         if client is None:
             return pd.DataFrame()
-        data = fetch_vista_tablero(client, limit=limite)
+        data = fetch_vista_tablero_todos(client)
         if not data:
             return pd.DataFrame()
         df = pd.DataFrame(data)
@@ -112,23 +112,13 @@ def _render_gestion_pedidos():
         st.error("Para usar la grilla editable necesitás **streamlit-aggrid**. Instalalo con: `pip install streamlit-aggrid`")
         return
 
-    limite_registros = st.number_input(
-        "Máximo de registros a cargar",
-        min_value=1000,
-        max_value=VISTA_TABLERO_LIMIT,
-        value=min(10000, VISTA_TABLERO_LIMIT),
-        step=1000,
-        key="pedidos_limite",
-        help=f"La vista tiene un tope de {VISTA_TABLERO_LIMIT:,} registros por petición para evitar timeout.",
-    )
-
     if st.button("🔄 Cargar / Actualizar datos", key="pedidos_cargar"):
         st.session_state.pop("pedidos_df", None)
         st.cache_data.clear()
         st.rerun()
 
-    with st.spinner(f"Cargando hasta {limite_registros:,} registros..."):
-        df = load_vista_unificada(limite=limite_registros)
+    with st.spinner("Cargando todos los registros (por lotes)..."):
+        df = load_vista_unificada()
 
     if df.empty:
         st.info("No hay datos disponibles. Sincronizá primero desde Importar Excel.")
@@ -167,9 +157,31 @@ def _render_gestion_pedidos():
     if 'VER EN FECHA' not in df_display.columns:
         df_display['VER EN FECHA'] = pd.NaT
 
-    # Configurar AgGrid
+    # Sin tope de órdenes: se cargan todas (por lotes). Espacio adaptable.
+    total_reg = len(df_display)
+    st.caption(f"📊 **{total_reg:,}** registros cargados (sin límite; crece con tus datos).")
+
+    filas_pagina = st.selectbox(
+        "Filas por página",
+        options=[50, 100, 200, 500],
+        index=1,
+        key="pedidos_filas_pagina",
+        help="Aumentá cuando tengas más órdenes para ver más filas a la vez.",
+    )
+
+    # Configurar AgGrid: columnas legibles, sin aplastar; títulos completos y wrap en celdas.
     gb = GridOptionsBuilder.from_dataframe(df_display)
-    gb.configure_default_column(resizable=True, filterable=True, sortable=True, editable=False, min_column_width=70)
+    gb.configure_default_column(
+        resizable=True,
+        filterable=True,
+        sortable=True,
+        editable=False,
+        min_column_width=150,
+        wrapHeaderText=True,
+        autoHeaderHeight=True,
+        wrapText=True,
+        autoHeight=True,
+    )
     gb.configure_grid_options(rowHeight=40, domLayout="normal")
 
     # --- Formato numérico profesional (separador de miles) ---
@@ -258,11 +270,13 @@ function(params) {
 """)
         )
 
-    gb.configure_pagination(enabled=True, paginationAutoPageSize=False, paginationPageSize=20)
+    # Paginación: filas por página elegidas por el usuario; sin tope total de registros.
+    gb.configure_pagination(enabled=True, paginationAutoPageSize=False, paginationPageSize=filas_pagina)
     gb.configure_side_bar(filters_panel=True, columns_panel=True)
 
     grid_options = gb.build()
 
+    # fit_columns_on_grid_load=False evita que AgGrid aplaste todas las columnas; scroll horizontal legible.
     grid_response = AgGrid(
         df_display,
         gridOptions=grid_options,

@@ -33,15 +33,16 @@ def fetch_all_data(table_name: str, supabase_client: Optional[Client], page_size
     return all_data
 
 
-# Límite único para la vista pesada: una sola petición evita statement timeout.
+# Tamaño de cada petición al cargar la vista (solo para no hacer timeout). NO hay tope total.
+CHUNK_SIZE_VISTA = 8000
+# Límite para una sola petición (solo dashboard_principal/dashboard que no usan lotes).
 VISTA_TABLERO_LIMIT = 15000
 
 
 def fetch_vista_tablero(supabase_client: Optional[Client], limit: Optional[int] = None) -> List[Any]:
     """
-    Carga la vista tablero principal en una sola petición.
-    La vista es costosa (joins/agregaciones); paginarla provoca timeout en Supabase.
-    El límite se capa a VISTA_TABLERO_LIMIT para no disparar timeout.
+    Carga la vista tablero principal en una sola petición (hasta `limit` filas).
+    Para cargar TODO usar fetch_vista_tablero_todos().
     """
     if supabase_client is None:
         return []
@@ -52,6 +53,40 @@ def fetch_vista_tablero(supabase_client: Optional[Client], limit: Optional[int] 
     except Exception as e:
         st.error(f"Error cargando vista tablero: {e}")
         return []
+
+
+def fetch_vista_tablero_todos(supabase_client: Optional[Client]) -> List[Any]:
+    """
+    Carga TODOS los registros de la vista por lotes. Sin límite total: crece con tus datos
+    (40k, 100k, 200k...). Solo se limita el tamaño de cada petición (CHUNK_SIZE_VISTA).
+    """
+    if supabase_client is None:
+        return []
+    all_data: List[Any] = []
+    start = 0
+    try:
+        while True:
+            end = start + CHUNK_SIZE_VISTA - 1  # PostgREST: range inclusivo
+            response = (
+                supabase_client.table("vista_tablero_principal")
+                .select("*")
+                .order("id_llamado")
+                .order("licitacion")
+                .order("codigo")
+                .order("item")
+                .range(start, end)
+                .execute()
+            )
+            data = getattr(response, "data", []) or []
+            if not data:
+                break
+            all_data.extend(data)
+            if len(data) < CHUNK_SIZE_VISTA:
+                break
+            start += CHUNK_SIZE_VISTA
+    except Exception as e:
+        st.error(f"Error cargando vista tablero por lotes: {e}")
+    return all_data
 
 
 @st.cache_resource

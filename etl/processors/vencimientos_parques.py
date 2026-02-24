@@ -2,6 +2,8 @@
 Procesador para vencimientos en parques (vencimientos_parques / vencimientos_pnc)
 REESCRITO para funcionar igual que siciap_app - Sin restricciones estúpidas
 """
+import csv
+import io
 import pandas as pd
 from sqlalchemy import text
 from etl.processors.base_processor import BaseProcessor
@@ -9,6 +11,27 @@ import logging
 import warnings
 
 logger = logging.getLogger(__name__)
+
+
+def _read_csv_safe(file_content) -> pd.DataFrame:
+    """Lee CSV sin usar pd.read_csv (evita problemas con argumento 'errors' en algunas versiones)."""
+    buf = file_content if isinstance(file_content, (bytes, bytearray)) else file_content.read()
+    text_content = None
+    for encoding in ("utf-8", "latin-1", "cp1252"):
+        try:
+            text_content = buf.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    if text_content is None:
+        text_content = buf.decode("utf-8", errors="replace")
+    reader = csv.reader(io.StringIO(text_content))
+    rows = list(reader)
+    if not rows:
+        return pd.DataFrame()
+    headers = [str(h).strip() for h in rows[0]]
+    data = rows[1:]
+    return pd.DataFrame(data, columns=headers)
 
 
 def safe_date_conversion(date_series):
@@ -83,11 +106,22 @@ class VencimientosParquesProcessor(BaseProcessor):
 
     def process_file(self, file_content, filename):
         try:
-            # Leer archivo (CSV o Excel)
+            # Este proceso no carga desde stock_critico ni ejecución; solo desde el archivo subido.
+            logger.info(
+                "Vencimientos (PNC/parques): carga desde archivo subido; "
+                "no se usa stock_critico ni ejecución."
+            )
+            # Leer CSV: pd.read_csv() NO tiene parámetro "errors". Solo encoding= y, si acaso, on_bad_lines=.
             if filename.lower().endswith('.csv'):
-                df = pd.read_csv(file_content, encoding='utf-8', errors='ignore')
+                buf = io.BytesIO(file_content) if isinstance(file_content, bytes) else file_content
+                try:
+                    df = pd.read_csv(buf, encoding="utf-8")
+                except UnicodeDecodeError:
+                    buf = io.BytesIO(file_content) if isinstance(file_content, bytes) else file_content
+                    df = pd.read_csv(buf, encoding="latin-1")
             else:
-                df = pd.read_excel(file_content, engine='openpyxl')
+                buf = io.BytesIO(file_content) if isinstance(file_content, bytes) else file_content
+                df = pd.read_excel(buf, engine='openpyxl')
             
             df.columns = [str(c).strip() for c in df.columns]
 
