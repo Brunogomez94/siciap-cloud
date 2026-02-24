@@ -1,37 +1,29 @@
 """
 Página de Órdenes
+Solo API REST de Supabase (sin SQLAlchemy).
 """
 import streamlit as st
 import pandas as pd
-from sqlalchemy import text
-from frontend.utils.db_connection import get_supabase_connection
+from frontend.utils.db_connection import get_supabase_client, fetch_all_data
 
 
 @st.cache_data(ttl=300)
 def load_ordenes():
-    """Carga datos de órdenes. Conexión nueva; se cierra al terminar."""
-    conn = None
+    """Carga todos los datos de órdenes (paginación interna) y ordena por fecha."""
     try:
-        conn = get_supabase_connection()
-        if conn is None:
+        client = get_supabase_client()
+        if client is None:
             return pd.DataFrame()
-        query = text("SELECT * FROM public.ordenes ORDER BY fecha_orden DESC LIMIT 1000")
-        df = pd.read_sql(query, conn)
+        data = fetch_all_data("ordenes", client)
+        if not data:
+            return pd.DataFrame()
+        df = pd.DataFrame(data)
+        if "fecha_orden" in df.columns:
+            df = df.sort_values("fecha_orden", ascending=False).reset_index(drop=True)
         return df
     except Exception as e:
-        if conn is not None:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
         st.error(f"Error cargando órdenes: {e}")
         return pd.DataFrame()
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
 
 
 def show():
@@ -75,6 +67,15 @@ def show():
         if 'estado' in df.columns:
             pendientes = len(df[df['estado'].str.contains('pendiente', case=False, na=False)])
             st.metric("Pendientes", pendientes)
+
+    # Drill-down: detalle de órdenes pendientes
+    if 'estado' in df.columns:
+        df_pendientes = df[df['estado'].str.contains('pendiente', case=False, na=False)]
+        with st.expander("🔽 Ver detalle de órdenes pendientes"):
+            if df_pendientes.empty:
+                st.caption("No hay órdenes en estado pendiente.")
+            else:
+                st.dataframe(df_pendientes, use_container_width=True, hide_index=True)
     
     # Tabla
     st.dataframe(df, width='stretch', hide_index=True)

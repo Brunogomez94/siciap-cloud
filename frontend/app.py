@@ -54,6 +54,20 @@ st.markdown("""
         margin-bottom: 2rem;
         font-weight: bold;
     }
+    /* Tarjetas de métricas estilo Dash: bordes redondeados y sombra */
+    div[data-testid="metric-container"] {
+        background-color: #ffffff;
+        border: 1px solid #e6e6e6;
+        padding: 5% 5% 5% 10%;
+        border-radius: 10px;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+    }
+    @media (prefers-color-scheme: dark) {
+        div[data-testid="metric-container"] {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -61,16 +75,9 @@ st.markdown('<h1 class="main-header">🏥 SICIAP Cloud</h1>', unsafe_allow_html=
 st.markdown('<p style="text-align: center; color: #666; font-size: 1.2rem;">Sistema Integrado de Gestión - Arquitectura Híbrida</p>', unsafe_allow_html=True)
 
 # --- DEFINICIÓN DE PÁGINAS ---
-# CORRECCIÓN: Rutas relativas a app.py (sin "frontend/")
-# Como app.py está en frontend/, las páginas están en pages/ (relativo a frontend/)
+# Solo Dashboard Editable. Importar Excel solo en local.
 pages_publicas = [
-    st.Page("pages/dashboard.py", title="📊 Dashboard General", icon="📈", default=True),
-    st.Page("pages/dashboard_principal.py", title="📈 Dashboard Principal", icon="📊"),
-    st.Page("pages/dashboard_editable.py", title="✏️ Dashboard Editable", icon="✏️"),
-    st.Page("pages/ordenes.py", title="📋 Órdenes de Compra", icon="📋"),
-    st.Page("pages/ejecucion.py", title="📊 Ejecución Contratos", icon="📊"),
-    st.Page("pages/stock.py", title="📦 Stock y Parques", icon="📦"),
-    st.Page("pages/pedidos.py", title="📝 Pedidos", icon="📝"),
+    st.Page("pages/dashboard_editable.py", title="✏️ Dashboard Editable", icon="✏️", default=True),
 ]
 
 # Esta página es SOLO PARA TI (Local)

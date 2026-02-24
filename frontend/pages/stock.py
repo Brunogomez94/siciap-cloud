@@ -1,38 +1,30 @@
 """
 Página de Stock Crítico
+Solo API REST de Supabase (sin SQLAlchemy).
 """
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from sqlalchemy import text
-from frontend.utils.db_connection import get_supabase_connection
+from frontend.utils.db_connection import get_supabase_client, fetch_all_data
 
 
 @st.cache_data(ttl=300)
 def load_stock():
-    """Carga datos de stock. Conexión nueva; se cierra al terminar."""
-    conn = None
+    """Carga todos los datos de stock (paginación interna) y ordena por stock_disponible."""
     try:
-        conn = get_supabase_connection()
-        if conn is None:
+        client = get_supabase_client()
+        if client is None:
             return pd.DataFrame()
-        query = text("SELECT * FROM public.stock_critico ORDER BY stock_disponible ASC")
-        df = pd.read_sql(query, conn)
+        data = fetch_all_data("stock_critico", client)
+        if not data:
+            return pd.DataFrame()
+        df = pd.DataFrame(data)
+        if "stock_disponible" in df.columns:
+            df = df.sort_values("stock_disponible").reset_index(drop=True)
         return df
     except Exception as e:
-        if conn is not None:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
         st.error(f"Error cargando stock: {e}")
         return pd.DataFrame()
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
 
 
 def show():
@@ -67,6 +59,15 @@ def show():
         if 'stock_disponible' in df.columns:
             total_stock = df['stock_disponible'].sum()
             st.metric("Stock Total", f"{total_stock:,.2f}")
+
+    # Drill-down: detalle de productos en estado crítico
+    if 'estado' in df.columns:
+        df_criticos = df[df['estado'] == 'critico']
+        with st.expander("🔽 Ver detalle de productos en stock crítico"):
+            if df_criticos.empty:
+                st.caption("No hay productos en estado crítico.")
+            else:
+                st.dataframe(df_criticos, use_container_width=True, hide_index=True)
     
     # Gráfico
     if 'estado' in df.columns:
@@ -78,6 +79,12 @@ def show():
             color=estado_counts.index,
             labels={'x': 'Estado', 'y': 'Cantidad'},
             color_discrete_map={'critico': 'red', 'bajo': 'orange', 'normal': 'green'}
+        )
+        fig.update_layout(
+            template="plotly_white",
+            margin=dict(l=20, r=20, t=40, b=20),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
         )
         st.plotly_chart(fig, use_container_width=True)
     

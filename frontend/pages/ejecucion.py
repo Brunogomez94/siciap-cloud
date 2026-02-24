@@ -1,37 +1,29 @@
 """
 Página de Ejecución
+Solo API REST de Supabase (sin SQLAlchemy).
 """
 import streamlit as st
 import pandas as pd
-from sqlalchemy import text
-from frontend.utils.db_connection import get_supabase_connection
+from frontend.utils.db_connection import get_supabase_client, fetch_all_data
 
 
 @st.cache_data(ttl=300)
 def load_ejecucion():
-    """Carga datos de ejecución. Conexión nueva; se cierra al terminar."""
-    conn = None
+    """Carga todos los datos de ejecución (paginación interna) y ordena por fecha."""
     try:
-        conn = get_supabase_connection()
-        if conn is None:
+        client = get_supabase_client()
+        if client is None:
             return pd.DataFrame()
-        query = text("SELECT * FROM public.ejecucion ORDER BY fecha_ejecucion DESC LIMIT 1000")
-        df = pd.read_sql(query, conn)
+        data = fetch_all_data("ejecucion", client)
+        if not data:
+            return pd.DataFrame()
+        df = pd.DataFrame(data)
+        if "fecha_ejecucion" in df.columns:
+            df = df.sort_values("fecha_ejecucion", ascending=False).reset_index(drop=True)
         return df
     except Exception as e:
-        if conn is not None:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
         st.error(f"Error cargando ejecución: {e}")
         return pd.DataFrame()
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
 
 
 def show():
@@ -68,6 +60,12 @@ def show():
         if 'monto_total' in df.columns:
             total_monto = df['monto_total'].sum()
             st.metric("Monto Total", f"${total_monto:,.2f}")
+
+    # Drill-down: detalle de ítems con mayor monto ejecutado
+    if 'monto_total' in df.columns:
+        df_top_monto = df.nlargest(100, 'monto_total')
+        with st.expander("🔽 Ver detalle de ítems con mayor monto ejecutado (top 100)"):
+            st.dataframe(df_top_monto, use_container_width=True, hide_index=True)
     
     # Tabla
     st.dataframe(df, width='stretch', hide_index=True)

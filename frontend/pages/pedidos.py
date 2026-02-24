@@ -1,37 +1,29 @@
 """
 Página de Pedidos
+Solo API REST de Supabase (sin SQLAlchemy).
 """
 import streamlit as st
 import pandas as pd
-from sqlalchemy import text
-from frontend.utils.db_connection import get_supabase_connection
+from frontend.utils.db_connection import get_supabase_client, fetch_all_data
 
 
 @st.cache_data(ttl=300)
 def load_pedidos():
-    """Carga datos de pedidos. Conexión nueva; se cierra al terminar."""
-    conn = None
+    """Carga todos los datos de pedidos (paginación interna) y ordena por fecha."""
     try:
-        conn = get_supabase_connection()
-        if conn is None:
+        client = get_supabase_client()
+        if client is None:
             return pd.DataFrame()
-        query = text("SELECT * FROM public.pedidos ORDER BY fecha_solicitud DESC LIMIT 1000")
-        df = pd.read_sql(query, conn)
+        data = fetch_all_data("pedidos", client)
+        if not data:
+            return pd.DataFrame()
+        df = pd.DataFrame(data)
+        if "fecha_solicitud" in df.columns:
+            df = df.sort_values("fecha_solicitud", ascending=False).reset_index(drop=True)
         return df
     except Exception as e:
-        if conn is not None:
-            try:
-                conn.rollback()
-            except Exception:
-                pass
         st.error(f"Error cargando pedidos: {e}")
         return pd.DataFrame()
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
 
 
 def show():
@@ -68,6 +60,15 @@ def show():
         if 'cantidad_pendiente' in df.columns:
             total_pendiente = df['cantidad_pendiente'].sum()
             st.metric("Cantidad Pendiente Total", f"{total_pendiente:,.2f}")
+
+    # Drill-down: detalle de pedidos con pendiente
+    if 'cantidad_pendiente' in df.columns:
+        df_pendientes = df[(df['cantidad_pendiente'].fillna(0) > 0)]
+        with st.expander("🔽 Ver detalle de registros con cantidad pendiente"):
+            if df_pendientes.empty:
+                st.caption("No hay registros con cantidad pendiente.")
+            else:
+                st.dataframe(df_pendientes, use_container_width=True, hide_index=True)
     
     # Tabla
     st.dataframe(df, width='stretch', hide_index=True)
