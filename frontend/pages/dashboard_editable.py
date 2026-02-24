@@ -209,6 +209,38 @@ def _render_gestion_pedidos():
     )
     gb.configure_grid_options(rowHeight=32, domLayout="normal")
 
+    # Anchos fijos para que la tabla arranque ordenada (sin tener que arrastrar columnas a mano).
+    anchos = {
+        "ID Llamado": 100,
+        "Licitación": 140,
+        "Nombre del Llamado": 140,
+        "Código": 90,
+        "Producto": 400,
+        "Proveedor": 120,
+        "Cantidad máxima": 120,
+        "Cantidad emitida": 120,
+        "Saldo contrato": 110,
+        "% Emitido": 95,
+        "Precio unitario": 110,
+        "Ítem": 80,
+        "Dirigido a": 120,
+        "Lugar": 100,
+        "Vigente": 80,
+        "Pendiente entrega": 130,
+        "Stock actual": 110,
+        "DMP": 90,
+        "Nivel stock": 120,
+        "Cantidad solicitada": 130,
+        "Ver en fecha": 115,
+        "Comentario": 150,
+        "Cobertura (meses)": 130,
+    }
+    for col, w in anchos.items():
+        if col in df_display.columns:
+            gb.configure_column(col, width=w)
+    if "estado_parque" in df_display.columns:
+        gb.configure_column("estado_parque", width=140)
+
     # Columnas numéricas: mismo filtro de texto (solo "Contiene") para buscar escribiendo el número sin elegir operador.
     # Así evitás el desplegable "Equals / Greater than / Between..." y filtrás solo tipeando.
     cols_numericas = ["ID Llamado", "Cantidad máxima", "Cantidad emitida", "Saldo contrato", "% Emitido", "Precio unitario", "Pendiente entrega", "Stock actual", "DMP", "Cantidad solicitada", "Cobertura (meses)"]
@@ -350,14 +382,14 @@ function(params) {
 
     grid_options = gb.build()
 
-    # Grilla: letra 10px, bordes finos negros y texto negro.
+    # Grilla: letra 12px, bordes finos negros y texto negro.
     custom_css = {
-        ".ag-root": {"font-size": "10px !important", "color": "#000 !important"},
-        ".ag-cell": {"font-size": "10px !important", "line-height": "1.2 !important", "border": "1px solid #000 !important", "color": "#000 !important"},
-        ".ag-header-cell": {"font-size": "10px !important", "line-height": "1.2 !important", "border": "1px solid #000 !important", "color": "#000 !important"},
-        ".ag-header-cell-label": {"font-size": "10px !important", "color": "#000 !important"},
-        ".ag-theme-alpine .ag-cell": {"font-size": "10px !important", "border": "1px solid #000 !important", "color": "#000 !important"},
-        ".ag-theme-alpine .ag-header-cell": {"font-size": "10px !important", "border": "1px solid #000 !important", "color": "#000 !important"},
+        ".ag-root": {"font-size": "12px !important", "color": "#000 !important"},
+        ".ag-cell": {"font-size": "12px !important", "line-height": "1.2 !important", "border": "1px solid #000 !important", "color": "#000 !important"},
+        ".ag-header-cell": {"font-size": "12px !important", "line-height": "1.2 !important", "border": "1px solid #000 !important", "color": "#000 !important"},
+        ".ag-header-cell-label": {"font-size": "12px !important", "color": "#000 !important"},
+        ".ag-theme-alpine .ag-cell": {"font-size": "12px !important", "border": "1px solid #000 !important", "color": "#000 !important"},
+        ".ag-theme-alpine .ag-header-cell": {"font-size": "12px !important", "border": "1px solid #000 !important", "color": "#000 !important"},
     }
 
     grid_response = AgGrid(
