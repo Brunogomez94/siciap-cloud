@@ -5,7 +5,12 @@ Solo API REST de Supabase (sin SQLAlchemy).
 """
 import streamlit as st
 import pandas as pd
-from frontend.utils.db_connection import get_supabase_client, fetch_all_data, fetch_vista_tablero_todos
+from frontend.utils.db_connection import get_supabase_client, fetch_all_data
+try:
+    from frontend.utils.db_connection import fetch_vista_tablero_todos
+except ImportError:
+    fetch_vista_tablero_todos = None
+from frontend.utils.db_connection import fetch_vista_tablero, VISTA_TABLERO_LIMIT
 from datetime import datetime, date
 import time
 
@@ -20,12 +25,15 @@ except ImportError:
 
 @st.cache_data(ttl=300)
 def load_vista_unificada():
-    """Carga TODOS los registros de la vista por lotes (40k, 100k+ sin timeout)."""
+    """Carga registros de la vista: por lotes si existe fetch_vista_tablero_todos, sino hasta VISTA_TABLERO_LIMIT."""
     try:
         client = get_supabase_client()
         if client is None:
             return pd.DataFrame()
-        data = fetch_vista_tablero_todos(client)
+        if fetch_vista_tablero_todos is not None:
+            data = fetch_vista_tablero_todos(client)
+        else:
+            data = fetch_vista_tablero(client, limit=VISTA_TABLERO_LIMIT)
         if not data:
             return pd.DataFrame()
         df = pd.DataFrame(data)
